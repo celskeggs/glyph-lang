@@ -76,8 +76,36 @@ define_atomic_glyphs(void)
     atom_define_glyph("metaexec", interp_metaexec);
 }
 
+static char *
+strip_extension(const char *name)
+{
+    const char *last = strrchr(name, '.');
+    if (last == NULL) {
+        fatal("expected file to have extension");
+    }
+    char *buf = malloc(last - name + 1);
+    if (buf == NULL) {
+        fatal("OOM in strip_extension");
+    }
+    memcpy(buf, name, last - name);
+    buf[last - name] = '\0';
+    return buf;
+}
+
+static char *
+add_extension(const char *name, const char *ext)
+{
+    char *buf = malloc(strlen(name) + strlen(ext) + 1);
+    if (buf == NULL) {
+        fatal("OOM in add_extension");
+    }
+    strcpy(buf, name);
+    strcat(buf, ext);
+    return buf;
+}
+
 static void
-configure_io(char **argv)
+configure_io(char *input_file)
 {
     if (!yaml_parser_initialize(&glyph_parser)) {
         fatal("cannot initialize parser");
@@ -86,29 +114,33 @@ configure_io(char **argv)
         fatal("cannot initialize emitter");
     }
 
-    FILE *input = fopen(argv[1], "rb");
+    char *input_base = strip_extension(input_file);
+    char *code_log = add_extension(input_base, ".ll");
+    metacode_temp_path = add_extension(input_base, ".tmp.ll");
+    char *render_out = add_extension(input_base, ".gry");
+
+    FILE *input = fopen(input_file, "rb");
     if (input == NULL) {
-        perror(argv[1]);
+        perror(input_file);
         fatal("cannot open input source");
     }
     yaml_parser_set_input_file(&glyph_parser, input);
 
-    _glyph_metacode_temp_output = fopen(argv[2], "w");
+    _glyph_metacode_temp_output = fopen(metacode_temp_path, "w");
     if (_glyph_metacode_temp_output == NULL) {
-        perror(argv[2]);
+        perror(metacode_temp_path);
         fatal("cannot open metacode temp output");
     }
-    metacode_temp_path = argv[2];
 
-    _glyph_metacode_log_output = fopen(argv[3], "w");
+    _glyph_metacode_log_output = fopen(code_log, "w");
     if (_glyph_metacode_log_output == NULL) {
-        perror(argv[3]);
+        perror(code_log);
         fatal("cannot open metacode log output");
     }
 
-    FILE *render = fopen(argv[4], "wb");
+    FILE *render = fopen(render_out, "wb");
     if (render == NULL) {
-        perror(argv[3]);
+        perror(render_out);
         fatal("cannot open render yaml output");
     }
     yaml_emitter_set_output_file(&render_emitter, render);
@@ -224,7 +256,7 @@ static void
 interpret_glyph(struct glyph_instance *glyph)
 {
     _glyph_current = glyph;
-    _glyph_begin_render();
+    _glyph_begin_render(glyph->type->name);
     glyph->type->interp();
     _glyph_end_render();
     _glyph_current = NULL;
@@ -274,12 +306,12 @@ process_source(void)
 int
 main(int argc, char *argv[])
 {
-    if (argc != 5) {
-        fprintf(stderr, "usage: %s <input.gf> <metacode-tmp.ll> <metacode-log.ll> <render.yaml>\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "usage: %s <input.gf>", argv[0]);
         return 1;
     }
 
-    configure_io(argv);
+    configure_io(argv[1]);
     define_atomic_glyphs();
     process_source();
     deconfigure_io();

@@ -132,10 +132,12 @@ void atom_render_text(const char *text) {
     end_mapping();
 }
 
-void _glyph_begin_render(void) {
+void _glyph_begin_render(const char *name) {
     start_mapping();
     scalar("op");
     scalar("glyph_bubble");
+    scalar("glyph");
+    scalar(name);
     scalar("content");
     start_sequence();
 }

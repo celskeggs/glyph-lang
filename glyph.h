@@ -31,7 +31,7 @@ extern const char *atom_fetch_text(void);
 extern void atom_render_text(const char *text);
 extern void atom_emit_metacode(const char *text);
 
-extern void _glyph_begin_render(void);
+extern void _glyph_begin_render(const char *name);
 extern void _glyph_end_render(void);
 extern void _glyph_outer_begin_render(void);
 extern void _glyph_outer_end_render(void);
